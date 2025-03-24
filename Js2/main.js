@@ -1,123 +1,250 @@
-let records = JSON.parse(localStorage.getItem("records")) || [];
-let editIndex = null;
+const btnInsertUpdate = document.getElementById("btnInsertUpdate");
+const btnClearItems = document.getElementById("btnClearItems");
+const btnClear = document.getElementById("btnClear");
+const tblRecords = document.getElementById("tblRecords");
 
-// Load records on page load
-window.onload = () => {
-    displayRecords();
-};
+const btnSaveToLocalStorage = document.getElementById("btnSaveToLocalStorage");
+const sortBy = document.getElementById("sortBy");
+const sortOrder = document.getElementById("sortOrder");
 
-// Insert new record
-function insertRecord() {
-    let firstName = document.getElementById("firstName").value.trim();
-    let middleName = document.getElementById("middleName").value.trim();
-    let lastName = document.getElementById("lastName").value.trim();
-    let age = document.getElementById("age").value.trim();
+let arrRecords = JSON.parse(localStorage.getItem("records")) || [];
+const tblTHsLabels = [
+  "First Name",
+  "Middle Name",
+  "Last Name",
+  "Age",
+  "Action",
+];
 
-    if (!firstName || !lastName || !age) {
-        alert("Please fill out all required fields.");
+if (arrRecords.length == 0) {
+  document.getElementById("status").style.display = "inline";
+  document.getElementById("status").innerHTML = "No Records...";
+} else {
+  document.getElementById("status").style.display = "none";
+  document.getElementById("controls").style.display = "block";
+  iterateRecords();
+}
+
+btnInsertUpdate.addEventListener("click", insertOrUpdateRecord);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    insertOrUpdateRecord();
+  }
+});
+
+function insertOrUpdateRecord() {
+  const inputTxt = document.getElementsByTagName("input");
+
+  if (btnInsertUpdate.value == "insert") {
+    for (const txt of inputTxt) {
+      if (txt.value == " " || txt.value == "") {
+        alert("Please complete all the text inputs!");
         return;
+      }
     }
 
-    if (editIndex !== null) {
-        records[editIndex] = { firstName, middleName, lastName, age: parseInt(age) };
-        editIndex = null;
-    } else {
-        records.push({ firstName, middleName, lastName, age: parseInt(age) });
+    let infoRecord = {
+      fname: inputTxt[0].value,
+      mname: inputTxt[1].value,
+      lname: inputTxt[2].value,
+      age: parseInt(inputTxt[3].value),
+    };
+
+    for (const txt of inputTxt) {
+      txt.value = "";
     }
 
-    saveToLocalStorage();
-    clearFields();
-    displayRecords();
+    arrRecords.push(infoRecord);
+
+    iterateRecords();
+
+    console.log(inputTxt);
+    console.log(infoRecord);
+    console.log(arrRecords);
+
+    // Show the controls when data is inserted
+    document.getElementById("controls").style.display = "block";
+  } else {
+    for (const txt of inputTxt) {
+      if (txt.value == " " || txt.value == "") {
+        alert("Please complete all the text inputs!");
+        return;
+      }
+    }
+
+    arrRecords[parseInt(btnInsertUpdate.value)].fname = inputTxt[0].value;
+    arrRecords[parseInt(btnInsertUpdate.value)].mname = inputTxt[1].value;
+    arrRecords[parseInt(btnInsertUpdate.value)].lname = inputTxt[2].value;
+    arrRecords[parseInt(btnInsertUpdate.value)].age = parseInt(
+      inputTxt[3].value
+    );
+
+    iterateRecords();
+
+    for (const txt of inputTxt) {
+      txt.value = "";
+    }
+
+    btnInsertUpdate.innerHTML = "Insert";
+    btnInsertUpdate.value = "insert";
+  }
 }
 
-// Display records and sort automatically
-function displayRecords() {
-    let table = document.getElementById("recordTable");
-    table.innerHTML = "";
+btnClear.addEventListener("click", () => {
+  const inputTxt = document.getElementsByTagName("input");
 
-    let category = document.getElementById("sortCategory").value;
-    let order = document.getElementById("sortOrder").value;
+  for (const txt of inputTxt) {
+    txt.value = "";
+  }
 
-    if (category && order) {
-        records.sort((a, b) => {
-            if (category === "age") {
-                return order === "asc" ? a.age - b.age : b.age - a.age;
-            } else {
-                return order === "asc"
-                    ? a[category].localeCompare(b[category])
-                    : b[category].localeCompare(a[category]);
-            }
-        });
-    }
+  btnInsertUpdate.innerHTML = "Insert";
+  btnInsertUpdate.value = "insert";
+});
 
-    records.forEach((record, index) => {
-        let row = table.insertRow();
-        row.insertCell(0).textContent = record.firstName;
-        row.insertCell(1).textContent = record.middleName;
-        row.insertCell(2).textContent = record.lastName;
-        row.insertCell(3).textContent = record.age;
+btnClearItems.addEventListener("click", () => {
+  arrRecords = [];
 
-        let actionCell = row.insertCell(4);
-        
-        let deleteBtn = document.createElement("button");
-        deleteBtn.textContent = "Delete";
-        deleteBtn.onclick = () => deleteRecord(index);
-        actionCell.appendChild(deleteBtn);
+  while (tblRecords.hasChildNodes()) {
+    tblRecords.removeChild(tblRecords.firstChild);
+  }
 
-        let editBtn = document.createElement("button");
-        editBtn.textContent = "Edit";
-        editBtn.onclick = () => editRecord(index);
-        actionCell.appendChild(editBtn);
+  document.getElementById("status").style.display = "inline";
+  document.getElementById("status").innerHTML = "No Records...";
+
+  btnInsertUpdate.innerHTML = "Insert";
+  btnInsertUpdate.value = "insert";
+
+  localStorage.removeItem("records");
+  document.getElementById("controls").style.display = "none";
+});
+
+btnSaveToLocalStorage.addEventListener("click", () => {
+  localStorage.setItem("records", JSON.stringify(arrRecords));
+  alert("Records saved to local storage.");
+});
+
+sortBy.addEventListener("change", sortRecords);
+sortOrder.addEventListener("change", sortRecords);
+
+function sortRecords() {
+  const sortKey = sortBy.value;
+  const order = sortOrder.value;
+
+  if (sortKey && order) {
+    arrRecords.sort((a, b) => {
+      if (order === "asc") {
+        return a[sortKey] > b[sortKey] ? 1 : -1;
+      } else {
+        return a[sortKey] < b[sortKey] ? 1 : -1;
+      }
     });
+    iterateRecords();
+  }
 }
 
-// Clear input fields
-function clearFields() {
-    document.getElementById("firstName").value = "";
-    document.getElementById("middleName").value = "";
-    document.getElementById("lastName").value = "";
-    document.getElementById("age").value = "";
-}
+function iterateRecords() {
+  while (tblRecords.hasChildNodes()) {
+    tblRecords.removeChild(tblRecords.firstChild);
+  }
 
-// Delete a record
-function deleteRecord(index) {
-    records.splice(index, 1);
-    saveToLocalStorage();
-    displayRecords();
-}
+  if (!(arrRecords.length == 0)) {
+    document.getElementById("status").style.display = "none";
 
-// Edit a record
-function editRecord(index) {
-    let record = records[index];
-    document.getElementById("firstName").value = record.firstName;
-    document.getElementById("middleName").value = record.middleName;
-    document.getElementById("lastName").value = record.lastName;
-    document.getElementById("age").value = record.age;
+    const tblHeaderRow = document.createElement("tr");
+    const tblHeader = document.createElement("thead");
+    tblHeaderRow.style.borderTop = "1px solid black";
+    tblHeaderRow.style.borderBottom = "1px solid black";
 
-    editIndex = index;
-}
+    for (let i = 0; i < 5; i++) {
+      const tblTHs = document.createElement("th");
+      tblTHs.style.padding = "5px";
 
-// Clear all records
-function clearRecords() {
-    if (confirm("Are you sure you want to clear all records?")) {
-        records = [];
-        saveToLocalStorage();
-        displayRecords();
+      if (i != 4) {
+        tblTHs.style.borderRight = "1px solid black";
+      }
+
+      tblTHs.innerHTML = tblTHsLabels[i];
+      tblHeaderRow.appendChild(tblTHs);
     }
+
+    tblHeader.appendChild(tblHeaderRow);
+    tblRecords.appendChild(tblHeader);
+
+    const tblBody = document.createElement("tbody");
+
+    arrRecords.forEach((rec, i) => {
+      const tblRow = document.createElement("tr");
+      const tbdataFname = document.createElement("td");
+      const tbdataMname = document.createElement("td");
+      const tbdataLname = document.createElement("td");
+      const tbdataAge = document.createElement("td");
+      const tbdataActionBtn = document.createElement("td");
+      const btnDelete = document.createElement("button");
+      const btnUpdate = document.createElement("button");
+
+      tbdataFname.style.borderRight = "1px solid black";
+      tbdataFname.style.padding = "10px";
+
+      tbdataMname.style.borderRight = "1px solid black";
+      tbdataMname.style.padding = "10px";
+
+      tbdataLname.style.borderRight = "1px solid black";
+      tbdataLname.style.padding = "10px";
+
+      tbdataAge.style.borderRight = "1px solid black";
+      tbdataAge.style.padding = "10px";
+
+      tbdataActionBtn.style.padding = "10px";
+
+      tblRow.style.borderBottom = "1px solid black";
+
+      tbdataFname.innerHTML = rec.fname;
+      tbdataMname.innerHTML = rec.mname;
+      tbdataLname.innerHTML = rec.lname;
+      tbdataAge.innerHTML = rec.age;
+
+      btnDelete.innerHTML = "Delete";
+      btnDelete.setAttribute("onclick", `deleteData(${i})`);
+      btnDelete.style.marginRight = "5px";
+
+      btnUpdate.innerHTML = "Edit";
+      btnUpdate.setAttribute("value", "update");
+      btnUpdate.setAttribute("onclick", `updateData(${i})`);
+      btnUpdate.style.marginRight = "5px";
+
+      tbdataActionBtn.appendChild(btnDelete);
+      tbdataActionBtn.appendChild(btnUpdate);
+
+      tblRow.appendChild(tbdataFname);
+      tblRow.appendChild(tbdataMname);
+      tblRow.appendChild(tbdataLname);
+      tblRow.appendChild(tbdataAge);
+      tblRow.appendChild(tbdataActionBtn);
+
+      tblBody.appendChild(tblRow);
+    });
+
+    tblRecords.appendChild(tblBody);
+  } else {
+    document.getElementById("status").style.display = "inline";
+    document.getElementById("status").innerHTML = "No Records...";
+  }
 }
 
-// Save to local storage
-function saveToLocalStorage() {
-    localStorage.setItem("records", JSON.stringify(records));
-
-    let message = document.getElementById("saveMessage");
-    message.textContent = "Data saved successfully!";
-
-    setTimeout(() => {
-        message.textContent = "";
-    }, 3000);
+function deleteData(i) {
+  arrRecords.splice(i, 1);
+  iterateRecords();
+  localStorage.setItem("records", JSON.stringify(arrRecords));
 }
 
-// Automatically sort when dropdown changes
-document.getElementById("sortCategory").onchange = displayRecords;
-document.getElementById("sortOrder").onchange = displayRecords;
+function updateData(i) {
+  const inputTxt = document.getElementsByTagName("input");
+
+  inputTxt[0].value = arrRecords[i].fname;
+  inputTxt[1].value = arrRecords[i].mname;
+  inputTxt[2].value = arrRecords[i].lname;
+  inputTxt[3].value = arrRecords[i].age;
+
+  btnInsertUpdate.innerHTML = "Update";
+  btnInsertUpdate.value = `${i}`;
+}
